@@ -1,133 +1,167 @@
-/* ============================================
-   3 PARTICLE NON-ELASTIC COLLISION (1D)
-   Visual + Numerical (butiran.js style)
-   ============================================ */
+// =======================
+// GLOBAL VARIABLES
+// =======================
+let particles = [];
+let DT = 0.01;
+let STEPS = 1000;
+let COEFR = 0.8;
 
-var canvas, ctx;
-var W = 600, H = 120;
+let running = false;
+let stepCount = 0;
+let timer = null;
 
-var t, dt, e;
-var x = [], v = [], m = [];
-var x0 = [], v0 = [];
-var timer = null;
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-var scale = 200;     // meter → pixel
-var offset = W/2;   // origin in canvas
-var radius = 10;
-
-/* ---------- INIT ---------- */
-window.onload = function() {
-  canvas = document.getElementById("canvas");
-  ctx = canvas.getContext("2d");
-  loadDefault();
-};
-
-/* ---------- READ ---------- */
-function read() {
-  dt = parseFloat(TDELT.value);
-  e  = parseFloat(COEFR.value);
-
-  for (let i=0;i<3;i++) {
-    m[i] = parseFloat(document.getElementById("M"+(i+1)).value);
-    x[i] = parseFloat(document.getElementById("X"+(i+1)).value);
-    v[i] = parseFloat(document.getElementById("V"+(i+1)).value);
-    x0[i]=x[i]; v0[i]=v[i];
+// =======================
+// PARTICLE CLASS
+// =======================
+class Particle {
+  constructor(x, y, vx, vy, m, r) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.m = m;
+    this.r = r;
   }
 
-  t = 0;
-  clearLog();
-  draw();
-  log();
-}
-
-/* ---------- DEFAULT ---------- */
-function loadDefault() {
-  TDELT.value = 0.01;
-  COEFR.value = 0.7;
-
-  M1.value=1; X1.value=-1; V1.value=1;
-  M2.value=1; X2.value=0;  V2.value=0;
-  M3.value=1; X3.value=1;  V3.value=0;
-
-  read();
-}
-
-/* ---------- CLEAR ---------- */
-function clearSim() {
-  if(timer) clearInterval(timer);
-  timer=null;
-
-  for(let i=0;i<3;i++){
-    x[i]=x0[i];
-    v[i]=v0[i];
-  }
-  t=0;
-  clearLog();
-  draw();
-  log();
-}
-
-/* ---------- START ---------- */
-function start() {
-  if(timer) return;
-  timer=setInterval(step, dt*1000);
-}
-
-/* ---------- STEP ---------- */
-function step() {
-  let xp = x.slice();
-
-  for(let i=0;i<3;i++){
-    x[i]+=v[i]*dt;
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
   }
 
-  check(0,1,xp);
-  check(1,2,xp);
-  check(0,2,xp);
-
-  t+=dt;
-  draw();
-  log();
-}
-
-/* ---------- COLLISION ---------- */
-function check(i,j,xp){
-  if((xp[i]-xp[j])*(x[i]-x[j])<=0){
-    collide(i,j);
-  }
-}
-
-function collide(i,j){
-  let vi=v[i], vj=v[j];
-  v[i]=(m[i]*vi+m[j]*vj-m[j]*e*(vi-vj))/(m[i]+m[j]);
-  v[j]=(m[i]*vi+m[j]*vj+m[i]*e*(vi-vj))/(m[i]+m[j]);
-}
-
-/* ---------- DRAW ---------- */
-function draw(){
-  ctx.clearRect(0,0,W,H);
-  ctx.beginPath();
-  ctx.moveTo(0,H/2);
-  ctx.lineTo(W,H/2);
-  ctx.stroke();
-
-  for(let i=0;i<3;i++){
+  draw() {
     ctx.beginPath();
-    ctx.arc(offset+x[i]*scale, H/2, radius, 0, 2*Math.PI);
-    ctx.fillStyle=["red","blue","green"][i];
-    ctx.fill();
+    ctx.arc(
+      this.x * canvas.width,
+      canvas.height / 2 - this.y * canvas.width,
+      this.r * canvas.width,
+      0, 2 * Math.PI
+    );
+    ctx.stroke();
   }
 }
 
-/* ---------- LOG ---------- */
-function log(){
-  let s=t.toFixed(3);
-  for(let i=0;i<3;i++){
-    s+="\t"+x[i].toFixed(3)+"\t"+v[i].toFixed(3);
-  }
-  output.value+=s+"\n";
+// =======================
+// PARSER (BUTIRAN STYLE)
+// =======================
+function readParams() {
+  particles = [];
+  const lines = document.getElementById("input").value.split("\n");
+
+  lines.forEach(line => {
+    line = line.trim();
+    if (line === "" || line.startsWith("#")) return;
+
+    const p = line.split(/\s+/);
+
+    if (p[0] === "DT") DT = parseFloat(p[1]);
+    if (p[0] === "STEPS") STEPS = parseInt(p[1]);
+    if (p[0] === "COEFR") COEFR = parseFloat(p[1]);
+
+    if (p[0] === "P") {
+      particles.push(new Particle(
+        parseFloat(p[1]),
+        parseFloat(p[2]),
+        parseFloat(p[3]),
+        parseFloat(p[4]),
+        parseFloat(p[5]),
+        parseFloat(p[6])
+      ));
+    }
+  });
+
+  draw();
 }
 
-function clearLog(){
-  output.value="";
+// =======================
+// COLLISION HANDLER
+// =======================
+function resolveCollision(p1, p2) {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const dist = Math.hypot(dx, dy);
+  const minDist = p1.r + p2.r;
+
+  if (dist >= minDist) return;
+
+  const nx = dx / dist;
+  const ny = dy / dist;
+
+  const dvx = p2.vx - p1.vx;
+  const dvy = p2.vy - p1.vy;
+  const vn = dvx * nx + dvy * ny;
+
+  if (vn > 0) return;
+
+  const e = COEFR;
+  const j = -(1 + e) * vn / (1 / p1.m + 1 / p2.m);
+
+  const ix = j * nx;
+  const iy = j * ny;
+
+  p1.vx -= ix / p1.m;
+  p1.vy -= iy / p1.m;
+  p2.vx += ix / p2.m;
+  p2.vy += iy / p2.m;
+}
+
+// =======================
+// SIMULATION LOOP
+// =======================
+function step() {
+  if (!running || stepCount > STEPS) return;
+
+  particles.forEach(p => p.update(DT));
+
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      resolveCollision(particles[i], particles[j]);
+    }
+  }
+
+  draw();
+  stepCount++;
+}
+
+// =======================
+// DRAW
+// =======================
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles.forEach(p => p.draw());
+}
+
+// =======================
+// BUTTON HANDLERS
+// =======================
+function startSim() {
+  if (running) return;
+  running = true;
+  timer = setInterval(step, 20);
+}
+
+function stopSim() {
+  running = false;
+  clearInterval(timer);
+}
+
+function clearSim() {
+  stopSim();
+  particles = [];
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function loadDefault() {
+  document.getElementById("input").value =
+`# Simulation Parameters
+DT 0.01
+STEPS 2000
+COEFR 0.7
+
+# Particles: x y vx vy mass radius
+P 0.2 0.0  1.0 0.0  1.0 0.03
+P 0.5 0.0  0.0 0.0  1.0 0.03
+P 0.8 0.0  0.0 0.0  1.0 0.03`;
 }
