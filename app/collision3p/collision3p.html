@@ -1,55 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>3-Particle Non-Elastic Collision (1D)</title>
-
+<title>collision3p – 3 Particle Collision (Non-Elastic)</title>
 <style>
-body { font-family: monospace; background:#f5f5f5; }
-canvas { border:1px solid #000; background:#fff; }
-fieldset { margin-bottom:10px; }
-label { display:inline-block; width:70px; }
-input { width:80px; }
-textarea { width:100%; height:200px; }
+body {
+  font-family: monospace;
+  margin: 0;
+}
+#container {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  height: 100vh;
+}
+#left {
+  padding: 10px;
+  border-right: 2px solid #aaa;
+}
+#right {
+  display: flex;
+  flex-direction: column;
+}
+textarea {
+  width: 100%;
+  height: 80%;
+}
+button {
+  width: 100%;
+  margin: 2px 0;
+}
+canvas {
+  border: 1px solid black;
+  background: white;
+}
+.tabs {
+  display: flex;
+}
+.tabs div {
+  padding: 5px 10px;
+  border: 1px solid #aaa;
+  cursor: pointer;
+}
+.tabs .active {
+  background: #ddd;
+}
 </style>
 </head>
 
 <body>
+<div id="container">
 
-<h3>Three-Particle Non-Elastic Collision (1D)</h3>
+<!-- LEFT PANEL -->
+<div id="left">
+  <div class="tabs">
+    <div class="active">Params</div>
+  </div>
 
-<canvas id="canvas" width="600" height="120"></canvas>
+<textarea id="input">
+# Simulation Parameters
+DT 0.01
+STEPS 2000
+COEFR 0.7
 
-<fieldset>
-<legend>Global</legend>
-<label>TDELT</label><input id="TDELT" value="0.01"><br>
-<label>COEFR</label><input id="COEFR" value="0.7">
-</fieldset>
+# Particles: x y vx vy mass radius
+P 0.2 0.0  1.0 0.0  1.0 0.03
+P 0.5 0.0  0.0 0.0  1.0 0.03
+P 0.8 0.0  0.0 0.0  1.0 0.03
+</textarea>
 
-<fieldset>
-<legend>Particles</legend>
-<b>P1</b>
-<label>M</label><input id="M1" value="1">
-<label>X</label><input id="X1" value="-1">
-<label>V</label><input id="V1" value="1"><br>
-
-<b>P2</b>
-<label>M</label><input id="M2" value="1">
-<label>X</label><input id="X2" value="0">
-<label>V</label><input id="V2" value="0"><br>
-
-<b>P3</b>
-<label>M</label><input id="M3" value="1">
-<label>X</label><input id="X3" value="1">
-<label>V</label><input id="V3" value="0">
-</fieldset>
-
-<button onclick="read()">Read</button>
-<button onclick="loadDefault()">Load</button>
 <button onclick="clearSim()">Clear</button>
-<button onclick="start()">Start</button>
+<button onclick="loadDefault()">Load</button>
+<button onclick="readParams()">Read</button>
+<button onclick="startSim()">Start</button>
+<button onclick="stopSim()">Stop</button>
 
-<textarea id="output" readonly></textarea>
+</div>
+
+<!-- RIGHT PANEL -->
+<div id="right">
+  <canvas id="canvas" width="600" height="400"></canvas>
+</div>
+
+</div>
 
 <script src="collision3p.js"></script>
 </body>
