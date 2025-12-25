@@ -1,23 +1,26 @@
-// =======================
-// GLOBAL
-// =======================
+// =====================================================
+// collision3p.js
+// 3 Particle Non-Elastic Collision (2D)
+// Mini-framework ala butiran.js (Pak Dudung)
+// =====================================================
+
+// ---------- GLOBAL ----------
 let canvas, ctx;
 let particles = [];
+
 let DT = 0.01;
 let STEPS = 2000;
 let COEFR = 0.7;
 
-let running = false;
 let stepCount = 0;
+let running = false;
 let timer = null;
 
-// visual scale
-const SCALE = 400;
+// visual mapping
+const SCALE = 350;
 const ORIGIN = { x: 300, y: 200 };
 
-// =======================
-// PARTICLE
-// =======================
+// ---------- PARTICLE ----------
 class Particle {
   constructor(x, y, vx, vy, m, r) {
     this.x = x;
@@ -46,50 +49,51 @@ class Particle {
   }
 }
 
-// =======================
-// INIT (WAJIB)
-// =======================
+// ---------- INIT ----------
 window.onload = function () {
   canvas = document.getElementById("canvas");
   ctx = canvas.getContext("2d");
   loadDefault();
 };
 
-// =======================
-// PARSER
-// =======================
+// ---------- PARSER ----------
 function readParams() {
   particles = [];
   stepCount = 0;
 
-  const lines = input.value.split("\n");
+  const lines = document.getElementById("input").value.split("\n");
+
   lines.forEach(line => {
     line = line.trim();
     if (line === "" || line.startsWith("#")) return;
 
     const p = line.split(/\s+/);
+
     if (p[0] === "DT") DT = parseFloat(p[1]);
     if (p[0] === "STEPS") STEPS = parseInt(p[1]);
     if (p[0] === "COEFR") COEFR = parseFloat(p[1]);
 
     if (p[0] === "P") {
-      particles.push(new Particle(
-        parseFloat(p[1]),
-        parseFloat(p[2]),
-        parseFloat(p[3]),
-        parseFloat(p[4]),
-        parseFloat(p[5]),
-        parseFloat(p[6])
-      ));
+      particles.push(
+        new Particle(
+          parseFloat(p[1]),
+          parseFloat(p[2]),
+          parseFloat(p[3]),
+          parseFloat(p[4]),
+          parseFloat(p[5]),
+          parseFloat(p[6])
+        )
+      );
     }
   });
+
+  document.getElementById("log").value =
+    "# t  x0 y0 vx0 vy0  x1 y1 vx1 vy1  x2 y2 vx2 vy2\n";
 
   draw();
 }
 
-// =======================
-// COLLISION
-// =======================
+// ---------- COLLISION ----------
 function resolveCollision(a, b) {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -104,6 +108,7 @@ function resolveCollision(a, b) {
   const dvx = b.vx - a.vx;
   const dvy = b.vy - a.vy;
   const vn = dvx * nx + dvy * ny;
+
   if (vn > 0) return;
 
   const j = -(1 + COEFR) * vn / (1 / a.m + 1 / b.m);
@@ -114,11 +119,9 @@ function resolveCollision(a, b) {
   b.vy += (j * ny) / b.m;
 }
 
-// =======================
-// STEP
-// =======================
+// ---------- STEP ----------
 function step() {
-  if (!running || stepCount > STEPS) return;
+  if (!running || stepCount >= STEPS) return;
 
   particles.forEach(p => p.update(DT));
 
@@ -129,16 +132,16 @@ function step() {
   }
 
   draw();
+  logData();
+
   stepCount++;
 }
 
-// =======================
-// DRAW
-// =======================
+// ---------- DRAW ----------
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // axis
+  // axes
   ctx.strokeStyle = "#aaa";
   ctx.beginPath();
   ctx.moveTo(0, ORIGIN.y);
@@ -150,9 +153,22 @@ function draw() {
   particles.forEach(p => p.draw());
 }
 
-// =======================
-// BUTTONS
-// =======================
+// ---------- LOGGER ----------
+function logData() {
+  let line = (stepCount * DT).toFixed(4);
+
+  particles.forEach(p => {
+    line += " " +
+      p.x.toFixed(4) + " " +
+      p.y.toFixed(4) + " " +
+      p.vx.toFixed(4) + " " +
+      p.vy.toFixed(4);
+  });
+
+  document.getElementById("log").value += line + "\n";
+}
+
+// ---------- BUTTONS ----------
 function startSim() {
   if (running) return;
   running = true;
@@ -171,16 +187,21 @@ function clearSim() {
 }
 
 function loadDefault() {
-  input.value =
-`# Simulation Parameters
+  document.getElementById("input").value =
+`# =========================
+# Simulation Parameters
+# =========================
 DT 0.01
 STEPS 2000
 COEFR 0.7
 
-# Particles: x y vx vy mass radius
-P -0.6  0.0  1.0 0.0  1.0 0.04
-P  0.0  0.3  0.0 0.0  1.0 0.04
-P  0.0 -0.3  0.0 0.0  1.0 0.04`;
+# =========================
+# Particles
+# x  y  vx  vy  mass  radius
+# =========================
+P -0.6   0.0   1.0  0.0   1.0   0.04
+P  0.0   0.3   0.0  0.0   1.0   0.04
+P  0.0  -0.3   0.0  0.0   1.0   0.04`;
 
   readParams();
 }
