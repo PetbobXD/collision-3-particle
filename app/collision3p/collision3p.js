@@ -62,7 +62,7 @@ P 0.6 0 0 0 1 0.05`;
 function readParams() {
   particles = [];
   time = 0;
-  clearTable();
+  clearTables();
 
   const lines = document.getElementById("params").value.split("\n");
   lines.forEach(line => {
@@ -96,12 +96,31 @@ function resolveCollision(a, b) {
   const vn = dvx * nx + dvy * ny;
   if (vn > 0) return;
 
+  // ===== SAVE VELOCITY BEFORE =====
+  const aBefore = { vx: a.vx, vy: a.vy };
+  const bBefore = { vx: b.vx, vy: b.vy };
+
   const j = -(1 + COEFR) * vn / (1 / a.m + 1 / b.m);
 
   a.vx -= (j * nx) / a.m;
   a.vy -= (j * ny) / a.m;
   b.vx += (j * nx) / b.m;
   b.vy += (j * ny) / b.m;
+
+  // ===== LOG COLLISION =====
+  logCollision(aBefore, a, "A");
+  logCollision(bBefore, b, "B");
+}
+
+// ================= LOGGING =================
+function logCollision(before, after, label) {
+  const row = document.createElement("tr");
+  row.innerHTML =
+    `<td>${time.toFixed(3)}</td>
+     <td>${label}</td>
+     <td>(${before.vx.toFixed(3)} i , ${before.vy.toFixed(3)} j)</td>
+     <td>(${after.vx.toFixed(3)} i , ${after.vy.toFixed(3)} j)</td>`;
+  document.getElementById("collisionbody").appendChild(row);
 }
 
 // ================= STEP =================
@@ -125,7 +144,6 @@ function step() {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // axis
   ctx.strokeStyle = "#aaa";
   ctx.beginPath();
   ctx.moveTo(0, ORIGIN.y);
@@ -152,8 +170,9 @@ function logData() {
   });
 }
 
-function clearTable() {
+function clearTables() {
   document.getElementById("databody").innerHTML = "";
+  document.getElementById("collisionbody").innerHTML = "";
 }
 
 // ================= BUTTONS =================
@@ -171,6 +190,6 @@ function stopSim() {
 function clearSim() {
   stopSim();
   particles = [];
-  clearTable();
+  clearTables();
   draw();
 }
